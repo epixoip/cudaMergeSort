@@ -43,7 +43,7 @@ sys   0m0.497s
 
 ### cudaMergeSort vs GNU Sort - 9.25GB file, 266M lines
 ##### 2x Xeon E5-2620 v4, 32GB DDR4, 2x GTX 1080, Samsung 850 PRO SATA3
-##### 1.72x speed-up vs. multi-thread sort
+##### 3.96x speed-up vs. multi-thread sort
 
 ```
 epixoip@QA-Lab4:~$ time ./cudaMergeSort test.txt
@@ -82,15 +82,15 @@ Device #0: Wrote 1418998091 bytes in 2.42 seconds (558.64 MB/sec)
 Sorting completed in 37.13 seconds
 
 Merging 5 chunks in 3 passes...
-Merge pass #1 completed in 63.48 seconds
-Merge pass #2 completed in 121.03 seconds
-Merge pass #3 completed in 135.52 seconds
+Merge pass #1 completed in 23.15 seconds
+Merge pass #2 completed in 43.76 seconds
+Merge pass #3 completed in 50.28 seconds
 
-Merging complete. Sorted file saved to 'test.txt.sorted'
+Merging complete. Sorted file saved to 'test.med.sorted'
 
-real   5m57.817s
-user   6m25.836s
-sys    0m37.032s
+real   2m35.767s
+user   2m35.296s
+sys    0m35.408s
 ```
 
 ```
