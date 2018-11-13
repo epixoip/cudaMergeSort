@@ -768,6 +768,8 @@ int main (int argc, char** argv)
         exit(1);
     }
 
+    char *bname = basename(argv[1]);
+
     int num_devs = 0;    
 
     cudaGetDeviceCount(&num_devs);
@@ -872,8 +874,8 @@ int main (int argc, char** argv)
     printf("\nSorting completed in %0.2lf seconds\n\n", (elapsed(sort_end, sort_start) / 1000));
 
     char *final = (char *) calloc(strlen(argv[1]) + 8, sizeof(char));
-    sprintf(final, "%s.sorted", argv[1]);
 
+    sprintf(final, "%s.sorted", argv[1]);
     unlink(final);
 
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -892,8 +894,9 @@ int main (int argc, char** argv)
     if (num_passes == 0) {
         printf("No chunks need merging.\n\n");
 
-        char *old_name = (char *) calloc(strlen(argv[1]) + 20, sizeof(char));
-        sprintf(old_name, "/tmp/%s.pass.0.chunk.0", argv[1]);
+        char *old_name = (char *) calloc(strlen(bname) + 20, sizeof(char));
+
+        sprintf(old_name, "/tmp/%s.pass.0.chunk.0", bname);
 
         if (rename(old_name, final) < 0) {
             fprintf(stderr, "Error renaming %s to %s: %s\n", old_name, final, strerror(errno));
@@ -909,7 +912,7 @@ int main (int argc, char** argv)
 
     for (pass = 0; pass < num_passes; pass++)
     {
-        char *last = (char *) calloc(strlen(argv[1]) + 32, sizeof(char));
+        char *last = (char *) calloc(strlen(bname) + 32, sizeof(char));
         unsigned int new_chunk = 0;
         chunk = 0;
 
@@ -925,14 +928,14 @@ int main (int argc, char** argv)
                 unsigned int left_chunk = chunk;
                 unsigned int right_chunk = chunk + 1;
 
-                args->file_left = (char *) calloc(strlen(argv[1]) + 32, sizeof(char));
-                sprintf(args->file_left, "/tmp/%s.pass.%d.chunk.%d", argv[1], pass, left_chunk);
+                args->file_left = (char *) calloc(strlen(bname) + 32, sizeof(char));
+                sprintf(args->file_left, "/tmp/%s.pass.%d.chunk.%d", bname, pass, left_chunk);
 
-                args->file_right = (char *) calloc(strlen(argv[1]) + 32, sizeof(char));
-                sprintf(args->file_right, "/tmp/%s.pass.%d.chunk.%d", argv[1], pass, right_chunk);
+                args->file_right = (char *) calloc(strlen(bname) + 32, sizeof(char));
+                sprintf(args->file_right, "/tmp/%s.pass.%d.chunk.%d", bname, pass, right_chunk);
 
-                args->file_merged = (char *) calloc(strlen(argv[1]) + 32, sizeof(char));
-                sprintf(args->file_merged, "/tmp/%s.pass.%d.chunk.%d", argv[1], pass + 1, new_chunk);
+                args->file_merged = (char *) calloc(strlen(bname) + 32, sizeof(char));
+                sprintf(args->file_merged, "/tmp/%s.pass.%d.chunk.%d", bname, pass + 1, new_chunk);
 
                 memmove(last, args->file_merged, strlen(args->file_merged));
 
