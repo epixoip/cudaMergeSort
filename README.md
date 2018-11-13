@@ -2,11 +2,11 @@
 
 cudaMergeSort is a highly parallel hybrid mergesort for sorting large files of arbitrary ASCII text (such as password cracking wordlists.) It is intended to be a fast replacement for _sort(1)_ for large files. A parallel radix sort is performed on each chunk of the input file on GPU (complements of Thrust), while each chunk is merged in parallel on the host CPU. Only unique lines are merged, and cudaMergeSort is therefore directly analogous to performing `sort -u` on an ASCII text file.
 
-Performance depends on a number of factors, including CPU, GPU, and HDD/SSD. cudaMergeSort can sort approximately 675M lines per second on the GTX 1080, and around 205M lines per second on the Quadro P3200. However, because merging is branch-heavy and IO-intensive, the merging process takes considerably longer than sorting. Even so, cudaMergeSort can be many times faster than sort(1), especially as sort(1) does not particularly benefit from parallelization.
+Performance depends on a number of factors, including CPU, GPU, and HDD/SSD. cudaMergeSort can sort approximately 675M lines per second on the GTX 1080, and around 205M lines per second on the Quadro P3200. However, because merging is branch-heavy and IO-intensive, the merging process takes considerably longer than sorting. Even so, cudaMergeSort can be many times faster than sort(1).
 
 ### cudaMergeSort vs GNU Sort - 134MB file, 1.4M lines
 ##### Xeon E-2176M, 32GB DDR4, Quadro P3200, Samsung 960 PRO NVMe
-##### 14.3x speed-up vs single thread, 13.8x speed-up vs multi-thread
+##### 14.3x speed-up vs. multi-thread sort
 
 ```
 epixoip@precision:~$ time ./cudaMergeSort rockyou.txt
@@ -41,18 +41,9 @@ user  0m43.608s
 sys   0m0.497s
 ```
 
-```
-epixoip@precision:~$ time sort -u --parallel $(getconf _NPROCESSORS_ONLN) \
-> -S $(du -b rockyou.txt | awk '{print $1}') rockyou.txt > rockyou.txt.sorted_gnu_parallel
-
-real	0m25.200s
-user	0m49.993s
-sys	0m0.636s
-```
-
 ### cudaMergeSort vs GNU Sort - 9.25GB file, 266M lines
 ##### 2x Xeon E5-2620 v4, 32GB DDR4, 2x GTX 1080, Samsung 850 PRO SATA3
-##### 1.72x speed-up vs multi-thread sort
+##### 1.72x speed-up vs. multi-thread sort
 
 ```
 epixoip@QA-Lab4:~$ time ./cudaMergeSort test.txt
