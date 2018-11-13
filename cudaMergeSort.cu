@@ -66,7 +66,7 @@ struct sort_args {
     unsigned int num_chunks;
     unsigned long long int bufsize;
     unsigned long long int fsize;
-    char *input_fname;
+    char *fname;
 };
 
 struct merge_args {
@@ -76,7 +76,7 @@ struct merge_args {
 };
 
 
-inline void delete_follow (char *fname)
+static inline void delete_follow (const char *fname)
 {
     char *link = (char *) calloc(PATH_MAX, sizeof(char));
 
@@ -92,7 +92,7 @@ inline void delete_follow (char *fname)
 }
 
 
-inline int eomap (char **map, char *orig, size_t map_sz)
+static inline int eomap (char **map, char *orig, size_t map_sz)
 {
     if (*map - orig >= map_sz) {
         return 1;
@@ -102,12 +102,12 @@ inline int eomap (char **map, char *orig, size_t map_sz)
 }
 
 
-inline void mgetl (char **map, char *orig, size_t map_sz, char *buf)
+static inline void mgetl (char **map, char *orig, size_t map_sz, char *buf)
 {
-    memset(buf, 0, MAX_LEN + 2);
-
-    int len = 0;
     char *buf_p = buf;
+    int len = 0;
+
+    memset(buf, 0, MAX_LEN + 2);
 
     while (*(*map) != '\n' && len < MAX_LEN && !eomap(map, orig, map_sz)) {
         *buf_p++ = *(*map)++;
@@ -124,11 +124,12 @@ inline void mgetl (char **map, char *orig, size_t map_sz, char *buf)
 }
 
 
-inline unsigned long long int fwritevn (thrust::host_vector<unsigned int> pos, thrust::host_vector<unsigned char> lines, int line_count, char *input_fname, unsigned int chunk)
+static inline unsigned long long int write_temp (thrust::host_vector<unsigned int> pos, thrust::host_vector<unsigned char> lines, int line_count, char *_fname, unsigned int chunk)
 {
-    char *fname = (char *) calloc(strlen(input_fname) + 24, sizeof(char));
+    char *bname = basename(_fname);
+    char *fname = (char *) calloc(strlen(bname) + 24, sizeof(char));
 
-    sprintf(fname, "/tmp/%s.pass.0.chunk.%d", input_fname, chunk);
+    sprintf(fname, "/tmp/%s.pass.0.chunk.%d", bname, chunk);
 
     int fd;
 
@@ -283,12 +284,12 @@ static void *sort (void *v_args)
     unsigned long long int bufsize = args->bufsize;
     unsigned long long int fsize = args->fsize;
 
-    char *input_fname = args->input_fname;
+    char *fname = args->fname;
 
     int fd = -1;
 
-    if ((fd = open(input_fname, O_RDONLY)) < 0) {
-        fprintf(stderr, "Error opening %s for reading: %s\n", input_fname, strerror(errno));
+    if ((fd = open(fname, O_RDONLY)) < 0) {
+        fprintf(stderr, "Error opening %s for reading: %s\n", fname, strerror(errno));
         exit(errno);
     }
 
@@ -308,7 +309,7 @@ static void *sort (void *v_args)
     unsigned char *map;
 
     if ((long int)(map = (unsigned char *) mmap(NULL, bufsize, PROT_READ, MAP_PRIVATE, fd, offset)) < 0) {
-        fprintf(stderr, "Error mapping %s: %s\n", input_fname, strerror(errno));
+        fprintf(stderr, "Error mapping %s: %s\n", fname, strerror(errno));
         exit(errno);
     }
 
@@ -596,7 +597,7 @@ static void *sort (void *v_args)
 
     clock_gettime(CLOCK_MONOTONIC, &tout1);
 
-    written = fwritevn(h_valIndex, h_stringVals, originalSize, input_fname, chunk);
+    written = write_temp(h_valIndex, h_stringVals, originalSize, fname, chunk);
 
     clock_gettime(CLOCK_MONOTONIC, &tout2);
 
@@ -855,7 +856,7 @@ int main (int argc, char** argv)
             args->num_chunks = num_chunks;
             args->bufsize = bufsize;
             args->fsize = st.st_size;
-            args->input_fname = argv[1];
+            args->fname = argv[1];
 
             pthread_create(&sort_threads[dev], NULL, &sort, args);
         }
