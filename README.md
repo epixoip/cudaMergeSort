@@ -94,8 +94,7 @@ sys    0m37.032s
 ```
 
 ```
-epixoip@QA-Lab4:~$ time sort -u --parallel $(getconf _NPROCESSORS_ONLN) \
-> -S $(du -b rockyou.txt | awk '{print $1}')test.txt >test.txt.sorted_gnu
+epixoip@QA-Lab4:~$ time sort -u test.txt >test.txt.sorted_gnu
 
 real   10m17.079s
 user   25m48.252s
