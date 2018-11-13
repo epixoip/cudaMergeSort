@@ -820,9 +820,7 @@ int main (int argc, char** argv)
 
     printf("Input file '%s' is %lu bytes\n", argv[1], st.st_size);
 
-//    if (st.st_size < (bufsize * num_devs)) {
     if (st.st_size < bufsize) {
-//        bufsize = (((st.st_size / num_devs) + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
         bufsize = ((st.st_size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
         printf("Decreased device buffer to %llu bytes\n", bufsize);
     }
