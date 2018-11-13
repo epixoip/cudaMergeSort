@@ -50,6 +50,7 @@
 #define MAX_THREADS_PER_BLOCK 1024
 #define BUFLEN 65536
 #define PAGE_SIZE 4096
+#define MAX_LEN 256
 
 using namespace std;
 
@@ -103,12 +104,12 @@ inline int eomap (char **map, char *orig, size_t map_sz)
 
 inline void mgetl (char **map, char *orig, size_t map_sz, char *buf)
 {
-    memset(buf, 0, BUFSIZ);
+    memset(buf, 0, MAX_LEN + 2);
 
     int len = 0;
     char *buf_p = buf;
 
-    while (*(*map) != '\n' && len < BUFSIZ - 2 && !eomap(map, orig, map_sz)) {
+    while (*(*map) != '\n' && len < MAX_LEN && !eomap(map, orig, map_sz)) {
         *buf_p++ = *(*map)++;
         len++;
     }
@@ -663,21 +664,21 @@ void *merge (void *v_args)
     char *left_p = map_left;
     char *right_p = map_right;
 
-    char line_left[BUFSIZ];
-    char prev_left[BUFSIZ];
-    char line_right[BUFSIZ];
-    char prev_right[BUFSIZ];
+    char line_left[MAX_LEN + 2];
+    char prev_left[MAX_LEN + 2];
+    char line_right[MAX_LEN + 2];
+    char prev_right[MAX_LEN + 2];
 
     mgetl(&map_left, left_p, st_left.st_size, line_left);
     mgetl(&map_right, right_p, st_right.st_size, line_right);
 
     while (!eomap(&map_left, left_p, st_left.st_size) && !eomap(&map_right, right_p, st_right.st_size))
     {
-        if (strcmp(line_left, line_right) < 0)
+        if (memcmp(line_left, line_right, MAX_LEN) < 0)
         {
             fputs(line_left, fd_merged);
 
-            memmove(prev_left, line_left, BUFSIZ);
+            memmove(prev_left, line_left, MAX_LEN);
 
             mgetl(&map_left, left_p, st_left.st_size, line_left);
 
@@ -685,11 +686,11 @@ void *merge (void *v_args)
                 mgetl(&map_left, left_p, st_left.st_size, line_left);
             }
         }
-        else if (strcmp(line_left, line_right) == 0)
+        else if (memcmp(line_left, line_right, MAX_LEN) == 0)
         {
             fputs(line_left, fd_merged);
 
-            memmove(prev_left, line_left, BUFSIZ);
+            memmove(prev_left, line_left, MAX_LEN);
 
             mgetl(&map_left, left_p, st_left.st_size, line_left);
 
@@ -697,7 +698,7 @@ void *merge (void *v_args)
                 mgetl(&map_left, left_p, st_left.st_size, line_left);
             }
 
-            memmove(prev_right, line_right, BUFSIZ);
+            memmove(prev_right, line_right, MAX_LEN);
 
             mgetl(&map_right, right_p, st_right.st_size, line_right);
 
@@ -709,7 +710,7 @@ void *merge (void *v_args)
         {
             fputs(line_right, fd_merged);
 
-            memmove(prev_right, line_right, BUFSIZ);
+            memmove(prev_right, line_right, MAX_LEN);
 
             mgetl(&map_right, right_p, st_right.st_size, line_right);
 
@@ -723,7 +724,7 @@ void *merge (void *v_args)
     {
         fputs(line_left, fd_merged);
 
-        memmove(prev_left, line_left, BUFSIZ);
+        memmove(prev_left, line_left, MAX_LEN);
 
         mgetl(&map_left, left_p, st_left.st_size, line_left);
 
@@ -736,7 +737,7 @@ void *merge (void *v_args)
     {
         fputs(line_right, fd_merged);
 
-        memmove(prev_right, line_right, BUFSIZ);
+        memmove(prev_right, line_right, MAX_LEN);
 
         mgetl(&map_right, right_p, st_right.st_size, line_right);
 
