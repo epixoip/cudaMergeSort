@@ -52,7 +52,7 @@ sys	0m0.636s
 
 ### cudaMergeSort vs GNU Sort - 9.25GB file, 266M lines
 ##### 2x Xeon E5-2620 v4, 32GB DDR4, 2x GTX 1080, Samsung 850 PRO SATA3
-##### 1.6x speed-up vs multi-thread sort
+##### 1.72x speed-up vs multi-thread sort
 
 ```
 epixoip@QA-Lab4:~$ time ./cudaMergeSort test.txt
@@ -64,42 +64,42 @@ Input file 'test.txt' is 9932976481 bytes
 
 Device #0: Initializing host buffer
 Device #1: Initializing host buffer
-Device #1: Initialized host buffer with 57155288 lines in 10.20 seconds (5604501.58 lines/sec)
-Device #1: Initialized device buffer in 786.59 ms
-Device #1: Sorted 57155288 lines in 84.45 ms (676M lines/sec), Runtime 919.65 ms
-Device #0: Initialized host buffer with 57153375 lines in 12.34 seconds (4632424.87 lines/sec)
-Device #0: Initialized device buffer in 816.19 ms
-Device #0: Sorted 57153375 lines in 84.51 ms (676M lines/sec), Runtime 949.19 ms
-Device #1: Wrote 2128494582 bytes in 4.84 seconds (419.22 MB/sec)
-Device #0: Wrote 2128494612 bytes in 5.48 seconds (370.32 MB/sec)
+Device #1: Initialized host buffer with 57155288 lines in 7.36 seconds (7764520.57 lines/sec)
+Device #0: Initialized host buffer with 57153375 lines in 7.39 seconds (7738116.22 lines/sec)
+Device #1: Initialized device buffer in 964.43 ms
+Device #1: Sorted 57155288 lines in 84.62 ms (675M lines/sec), Runtime 1098.72 ms
+Device #0: Initialized device buffer in 1558.36 ms
+Device #0: Sorted 57153375 lines in 84.55 ms (675M lines/sec), Runtime 1691.55 ms
+Device #1: Wrote 2128494582 bytes in 5.11 seconds (397.31 MB/sec)
+Device #0: Wrote 2128494612 bytes in 4.79 seconds (423.88 MB/sec)
 Device #0: Initializing host buffer
 Device #1: Initializing host buffer
-Device #1: Initialized host buffer with 57154635 lines in 7.66 seconds (7459314.54 lines/sec)
-Device #0: Initialized host buffer with 57156029 lines in 7.70 seconds (7426134.59 lines/sec)
-Device #1: Initialized device buffer in 1243.02 ms
-Device #0: Initialized device buffer in 1247.01 ms
-Device #1: Sorted 57154635 lines in 84.35 ms (677M lines/sec), Runtime 1375.83 ms
-Device #0: Sorted 57156029 lines in 84.40 ms (677M lines/sec), Runtime 1384.58 ms
-Device #0: Wrote 2128494611 bytes in 4.76 seconds (425.94 MB/sec)
-Device #1: Wrote 2128494584 bytes in 5.32 seconds (381.14 MB/sec)
+Device #0: Initialized host buffer with 57156029 lines in 7.51 seconds (7606993.95 lines/sec)
+Device #1: Initialized host buffer with 57154635 lines in 7.53 seconds (7594079.49 lines/sec)
+Device #0: Initialized device buffer in 1321.12 ms
+Device #1: Initialized device buffer in 1320.46 ms
+Device #0: Sorted 57156029 lines in 84.33 ms (677M lines/sec), Runtime 1458.82 ms
+Device #1: Sorted 57154635 lines in 84.37 ms (677M lines/sec), Runtime 1455.69 ms
+Device #1: Wrote 2128494584 bytes in 5.30 seconds (382.82 MB/sec)
+Device #0: Wrote 2128494611 bytes in 5.45 seconds (371.96 MB/sec)
 Device #0: Initializing host buffer
-Device #0: Initialized host buffer with 38104066 lines in 5.15 seconds (7400254.19 lines/sec)
-Device #0: Initialized device buffer in 447.99 ms
-Device #0: Sorted 38104066 lines in 62.80 ms (606M lines/sec), Runtime 543.54 ms
-Device #0: Wrote 1418998091 bytes in 2.87 seconds (470.92 MB/sec)
+Device #0: Initialized host buffer with 38104066 lines in 5.03 seconds (7578078.40 lines/sec)
+Device #0: Initialized device buffer in 446.02 ms
+Device #0: Sorted 38104066 lines in 62.46 ms (610M lines/sec), Runtime 542.82 ms
+Device #0: Wrote 1418998091 bytes in 2.42 seconds (558.64 MB/sec)
 
-Sorting completed in 42.38 seconds
+Sorting completed in 37.13 seconds
 
 Merging 5 chunks in 3 passes...
-Merge pass #1 completed in 66.01 seconds
-Merge pass #2 completed in 128.58 seconds
-Merge pass #3 completed in 147.73 seconds
+Merge pass #1 completed in 63.48 seconds
+Merge pass #2 completed in 121.03 seconds
+Merge pass #3 completed in 135.52 seconds
 
 Merging complete. Sorted file saved to 'test.txt.sorted'
 
-real   6m25.862s
-user   6m58.844s
-sys    0m41.240s
+real   5m57.817s
+user   6m25.836s
+sys    0m37.032s
 ```
 
 ```
