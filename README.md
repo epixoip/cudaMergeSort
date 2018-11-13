@@ -51,7 +51,7 @@ sys	0m0.636s
 ```
 
 ### cudaMergeSort vs GNU Sort - 9.25GB file, 266M lines
-##### Xeon E5-2620 v4, 32GB DDR4, 2x GTX 1080, Samsung 850 PRO SATA3
+##### 2x Xeon E5-2620 v4, 32GB DDR4, 2x GTX 1080, Samsung 850 PRO SATA3
 ##### 1.6x speed-up vs multi-thread sort
 
 ```
