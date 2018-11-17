@@ -86,7 +86,7 @@ Merge pass #1 completed in 23.15 seconds
 Merge pass #2 completed in 43.76 seconds
 Merge pass #3 completed in 50.28 seconds
 
-Merging complete. Sorted file saved to 'test.med.sorted'
+Merging complete. Sorted file saved to 'test.txt.sorted'
 
 real   2m35.767s
 user   2m35.296s
