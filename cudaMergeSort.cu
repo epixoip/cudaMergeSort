@@ -30,22 +30,23 @@
     Compile: nvcc -g -O3 -m 64 -arch sm_61 -lrt -lm -o cudaMergeSort cudaMergeSort.cu
 */
 
+#include <cstdlib>
 #include <cuda_runtime_api.h>
-#include <thrust/system_error.h>
-#include <thrust/system/cuda/error.h>
-#include <thrust/host_vector.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <math.h>
+#include <pthread.h>
+#include <sys/mman.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <thrust/copy.h>
 #include <thrust/device_vector.h>
 #include <thrust/generate.h>
+#include <thrust/host_vector.h>
 #include <thrust/sort.h>
-#include <thrust/copy.h>
-#include <cstdlib>
-#include <pthread.h>
-#include <math.h>
-#include <errno.h>
+#include <thrust/system/cuda/error.h>
+#include <thrust/system_error.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
 
 #define MAX_THREADS_PER_BLOCK 1024
 #define BUFLEN 65536
@@ -89,6 +90,44 @@ static inline void delete_follow (const char *fname)
     if (unlink(fname) < 0) {
         fprintf(stderr, "Error deleting %s: %s\n", fname, strerror(errno));
     }
+}
+
+
+static inline int move_file (char *src, char *dst)
+{
+    if (rename(src, dst) >= 0) {
+        return 0;
+    }
+
+    /* rename(2) cannot rename across filesystems; fallback to manual move */
+
+    int dst_fd = open(dst, O_CREAT | O_WRONLY, 0644);
+
+    if (dst_fd < 0) {
+        fprintf(stderr, "Error opening %s: %s\n", dst, strerror(errno));
+        return errno;
+    }
+
+    int src_fd = open(src, O_RDONLY);
+
+    if (src_fd < 0) {
+        fprintf(stderr, "Error opening %s: %s\n", src, strerror(errno));
+        return errno;
+    }
+
+    struct stat src_stat;
+    fstat(src_fd, &src_stat);
+
+    ssize_t bytes = sendfile (dst_fd, src_fd, 0, src_stat.st_size);
+
+    if (bytes != src_stat.st_size) {
+        fprintf(stderr, "Error: %s is %ld bytes, but we only copied %ld bytes?\n", src, src_stat.st_size, bytes);
+        return 1;
+    }
+
+    delete_follow (src);
+
+    return 0;
 }
 
 
@@ -611,6 +650,7 @@ static void *sort (void *v_args)
     return NULL;
 }
 
+
 void *merge (void *v_args)
 {
     merge_args *args = static_cast<merge_args*>(v_args);
@@ -898,9 +938,10 @@ int main (int argc, char** argv)
 
         sprintf(old_name, "/tmp/%s.pass.0.chunk.0", bname);
 
-        if (rename(old_name, final) < 0) {
-            fprintf(stderr, "Error renaming %s to %s: %s\n", old_name, final, strerror(errno));
-            exit(errno);
+        int ret = 0;
+
+        if ((ret = move_file(old_name, final)) != 0) {
+            exit(ret);
         }
 
         printf("Sorted file saved to '%s'\n", final);
@@ -968,9 +1009,10 @@ int main (int argc, char** argv)
 
         if (num_chunks == 2)
         {
-            if (rename(last, final) != 0) {
-                fprintf(stderr, "Error moving %s: %s\n", last, strerror(errno));
-                exit(errno);
+            int ret = 0;
+
+            if ((ret = move_file(last, final)) != 0) {
+                exit(ret);
             }
 
             printf("\nMerging complete. Sorted file saved to '%s'\n", final);
