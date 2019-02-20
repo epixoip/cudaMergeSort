@@ -597,7 +597,7 @@ static void *sort (void *v_args)
             break;
         }
 
-        segmentBytes = (int) ceil(((float)(log2((float)lastSegmentID+2))*1.0)/8.0);
+        segmentBytes = (int) ceil((float)std::log2((float)(lastSegmentID + 2)) / (float)8.0);
         charPosition-=(segmentBytes-1);
 
         int numBlocks1 = 1;
