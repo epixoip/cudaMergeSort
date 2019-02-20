@@ -27,7 +27,13 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
     ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    Compile: nvcc -g -O3 -m 64 -arch sm_61 -lrt -lm -o cudaMergeSort cudaMergeSort.cu
+    Compile:
+
+    nvcc -g -O3 -m 64 -lrt -lm -o cudaMergeSort \
+        -gencode arch=compute_35,code=sm_35 \
+        -gencode arch=compute_52,code=sm_52 \
+        -gencode arch=compute_62,code=sm_62 \
+        cudaMergeSort.cu
 */
 
 #include <cstdlib>
@@ -68,12 +74,14 @@ struct sort_args {
     unsigned long long int bufsize;
     unsigned long long int fsize;
     char *fname;
+    char *tmpdir;
 };
 
 struct merge_args {
     char *file_left;
     char *file_right;
     char *file_merged;
+    char *tmpdir;
 };
 
 
@@ -95,6 +103,8 @@ static inline void delete_follow (const char *fname)
 
 static inline int move_file (char *src, char *dst)
 {
+    delete_follow (dst);
+
     if (rename(src, dst) >= 0) {
         return 0;
     }
@@ -163,12 +173,12 @@ static inline void mgetl (char **map, char *orig, size_t map_sz, char *buf)
 }
 
 
-static inline unsigned long long int write_temp (thrust::host_vector<unsigned int> pos, thrust::host_vector<unsigned char> lines, int line_count, char *_fname, unsigned int chunk)
+static inline unsigned long long int write_temp (thrust::host_vector<unsigned int> pos, thrust::host_vector<unsigned char> lines, int line_count, char *_fname, char *tmpdir, unsigned int chunk)
 {
     char *bname = basename(_fname);
     char *fname = (char *) calloc(strlen(bname) + 24, sizeof(char));
 
-    sprintf(fname, "/tmp/%s.pass.0.chunk.%d", bname, chunk);
+    sprintf(fname, "%s/%s.pass.0.chunk.%d", tmpdir, bname, chunk);
 
     int fd;
 
@@ -324,6 +334,7 @@ static void *sort (void *v_args)
     unsigned long long int fsize = args->fsize;
 
     char *fname = args->fname;
+    char *tmpdir = args->tmpdir;
 
     int fd = -1;
 
@@ -636,7 +647,7 @@ static void *sort (void *v_args)
 
     clock_gettime(CLOCK_MONOTONIC, &tout1);
 
-    written = write_temp(h_valIndex, h_stringVals, originalSize, fname, chunk);
+    written = write_temp(h_valIndex, h_stringVals, originalSize, fname, tmpdir, chunk);
 
     clock_gettime(CLOCK_MONOTONIC, &tout2);
 
@@ -803,12 +814,62 @@ void *merge (void *v_args)
 
 int main (int argc, char** argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s [filename]\n", argv[0]);
+    char *tmpdir = (char *)"/tmp";
+    char *outfile = NULL;
+    int c = 0;
+
+    if (argc < 2 || strcmp(argv[1], "-h") == 0) {
+        fprintf (
+                stderr,
+                "Usage: %s [opts] <filename>\n\n"
+                "Options:\n"
+                "    -h             Print this help message\n"
+                "    -o <file>      Output filename (default: $argv[1].sorted\n"
+                "    -T <path>      Directory for temporary files (default: /tmp)\n\n",
+                argv[0]
+        );
         exit(1);
     }
 
-    char *bname = basename(argv[1]);
+    opterr = 0;
+
+    while ((c = getopt (argc, argv, "o:T:")) != -1)
+    {
+        switch (c)
+        {
+            case 'o':
+                outfile = optarg;
+                break;
+            case 'T':
+                tmpdir = optarg;
+                break;
+            case 'h':
+                break;
+            case '?':
+                if (optopt == 'c') {
+                    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+                } else if (isprint (optopt)) {
+                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+                } else {
+                    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+                }
+                return 1;
+            }
+    }
+
+    if (optind >= argc)
+    {
+        fprintf(stderr, "Missing filename argument. See '%s -h' for usage information.\n", argv[0]);
+        return 1;
+    }
+
+    char *input = argv[optind];
+    char *bname = basename(input);
+
+    if (outfile == NULL) {
+        outfile = (char *) calloc(strlen(input) + 8, sizeof(char));
+        sprintf(outfile, "%s.sorted", input);
+    }
 
     int num_devs = 0;    
 
@@ -844,13 +905,15 @@ int main (int argc, char** argv)
         }
     }
 
-    printf("\n");
+    printf("\nInput file.......: %s\n", input);
+    printf("Output file......: %s\n", outfile);
+    printf("Temp directory...: %s\n\n", tmpdir);
 
     struct stat st;
     int fd;
 
-    if ((fd = open(argv[1], O_RDONLY)) < 0) {
-        fprintf(stderr, "Error opening %s for reading: %s\n", argv[1], strerror(errno));
+    if ((fd = open(input, O_RDONLY)) < 0) {
+        fprintf(stderr, "Error opening %s for reading: %s\n", input, strerror(errno));
         exit(errno);
     }
 
@@ -862,7 +925,7 @@ int main (int argc, char** argv)
         exit(3);
     }
 
-    printf("Input file '%s' is %lu bytes\n", argv[1], st.st_size);
+    printf("Input file '%s' is %lu bytes\n", input, st.st_size);
 
     if (st.st_size < bufsize) {
         bufsize = ((st.st_size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
@@ -898,7 +961,8 @@ int main (int argc, char** argv)
             args->num_chunks = num_chunks;
             args->bufsize = bufsize;
             args->fsize = st.st_size;
-            args->fname = argv[1];
+            args->fname = input;
+            args->tmpdir = tmpdir;
 
             pthread_create(&sort_threads[dev], NULL, &sort, args);
         }
@@ -912,11 +976,6 @@ int main (int argc, char** argv)
 
     clock_gettime(CLOCK_MONOTONIC, &sort_end);
     printf("\nSorting completed in %0.2lf seconds\n\n", (elapsed(sort_end, sort_start) / 1000));
-
-    char *final = (char *) calloc(strlen(argv[1]) + 8, sizeof(char));
-
-    sprintf(final, "%s.sorted", argv[1]);
-    unlink(final);
 
     int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -936,15 +995,15 @@ int main (int argc, char** argv)
 
         char *old_name = (char *) calloc(strlen(bname) + 20, sizeof(char));
 
-        sprintf(old_name, "/tmp/%s.pass.0.chunk.0", bname);
+        sprintf(old_name, "%s/%s.pass.0.chunk.0", tmpdir, bname);
 
         int ret = 0;
 
-        if ((ret = move_file(old_name, final)) != 0) {
+        if ((ret = move_file(old_name, outfile)) != 0) {
             exit(ret);
         }
 
-        printf("Sorted file saved to '%s'\n", final);
+        printf("Sorted file saved to '%s'\n", outfile);
 
         exit(0);
     }
@@ -970,13 +1029,13 @@ int main (int argc, char** argv)
                 unsigned int right_chunk = chunk + 1;
 
                 args->file_left = (char *) calloc(strlen(bname) + 32, sizeof(char));
-                sprintf(args->file_left, "/tmp/%s.pass.%d.chunk.%d", bname, pass, left_chunk);
+                sprintf(args->file_left, "%s/%s.pass.%d.chunk.%d", tmpdir, bname, pass, left_chunk);
 
                 args->file_right = (char *) calloc(strlen(bname) + 32, sizeof(char));
-                sprintf(args->file_right, "/tmp/%s.pass.%d.chunk.%d", bname, pass, right_chunk);
+                sprintf(args->file_right, "%s/%s.pass.%d.chunk.%d", tmpdir, bname, pass, right_chunk);
 
                 args->file_merged = (char *) calloc(strlen(bname) + 32, sizeof(char));
-                sprintf(args->file_merged, "/tmp/%s.pass.%d.chunk.%d", bname, pass + 1, new_chunk);
+                sprintf(args->file_merged, "%s/%s.pass.%d.chunk.%d", tmpdir, bname, pass + 1, new_chunk);
 
                 memmove(last, args->file_merged, strlen(args->file_merged));
 
@@ -1011,11 +1070,11 @@ int main (int argc, char** argv)
         {
             int ret = 0;
 
-            if ((ret = move_file(last, final)) != 0) {
+            if ((ret = move_file(last, outfile)) != 0) {
                 exit(ret);
             }
 
-            printf("\nMerging complete. Sorted file saved to '%s'\n", final);
+            printf("\nMerging complete. Sorted file saved to '%s'\n", outfile);
         }
 
         num_chunks = ceil((float) num_chunks / 2.0);
