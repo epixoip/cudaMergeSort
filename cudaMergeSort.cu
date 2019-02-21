@@ -91,12 +91,16 @@ static inline void delete_follow (const char *fname)
 
     if (readlink(fname, link, PATH_MAX) >= 0) {
         if (unlink(link) < 0) {
-            fprintf(stderr, "Error deleting %s: %s\n", link, strerror(errno));
+            if (errno != 2) {
+                fprintf(stderr, "Error deleting %s: %s\n", link, strerror(errno));
+            }
         }
     }
 
     if (unlink(fname) < 0) {
-        fprintf(stderr, "Error deleting %s: %s\n", fname, strerror(errno));
+        if (errno != 2) {
+            fprintf(stderr, "Error deleting %s: %s\n", fname, strerror(errno));
+        }
     }
 }
 
